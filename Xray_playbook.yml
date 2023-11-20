@@ -1,0 +1,42 @@
+---
+- name: Install JFrog Xray in Airgap Environment
+  hosts: xray_servers
+  become: yes
+
+  tasks:
+    - name: Copy Xray airgap bundle to the server
+      copy:
+        src: /path/to/xray_airgap_bundle.tar.gz
+        dest: /tmp/xray_airgap_bundle.tar.gz
+
+    - name: Unarchive Xray airgap bundle
+      unarchive:
+        src: /tmp/xray_airgap_bundle.tar.gz
+        dest: /opt/xray
+        remote_src: yes
+      become_user: xray_user
+
+    - name: Create Xray service user
+      user:
+        name: xray_user
+        state: present
+
+    - name: Set appropriate permissions on Xray installation directory
+      file:
+        path: /opt/xray
+        owner: xray_user
+        group: xray_user
+        recurse: yes
+
+    - name: Install JFrog Xray
+      command: /opt/xray/install_xray.sh
+      args:
+        chdir: /opt/xray
+      become_user: xray_user
+
+    - name: Start Xray service
+      systemd:
+        name: xray
+        enabled: yes
+        state: started
+
