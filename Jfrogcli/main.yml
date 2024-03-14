@@ -1,0 +1,27 @@
+---
+- name: Install JFrog CLI
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install unzip package
+      apt:
+        name: unzip
+        state: present
+      when: ansible_os_family == 'Debian'  # Adjust this condition based on your target OS family
+
+    - name: Download JFrog CLI binary
+      get_url:
+        url: "https://releases.jfrog.io/artifactory/jfrog-cli/v2/{{ jfrog_cli_version }}/jfrog-cli-linux-386/jfrog"
+        dest: /usr/local/bin/jfrog
+        mode: 0755
+      vars:
+        jfrog_cli_version: 2.0.1  # Update the version as needed
+
+    - name: Configure JFrog CLI
+      command: jfrog rt config --url={{ jfrog_url }} --user={{ jfrog_user }} --password={{ jfrog_password }} --interactive=false
+      environment:
+        JFROG_CLI_OFFER_CONFIG: "false"
+      vars:
+        jfrog_url: "https://your.jfrog.instance/artifactory"  # Update with your JFrog Artifactory URL
+        jfrog_user: "your_username"
+        jfrog_password: "your_password"
