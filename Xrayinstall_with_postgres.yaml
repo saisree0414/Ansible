@@ -1,0 +1,64 @@
+---
+- name: Install JFrog Xray with External PostgreSQL
+  hosts: xray_servers
+  become: yes
+  vars:
+    postgres_host: "your_postgres_host"
+    postgres_port: "5432"
+    postgres_db: "xray_db"
+    postgres_user: "xray_user"
+    postgres_password: "your_postgres_password"
+    xray_version: "3.28.4"
+    xray_install_path: "/opt/jfrog/xray"
+  
+  tasks:
+    - name: Install PostgreSQL client
+      package:
+        name: postgresql-client
+        state: present
+
+    - name: Create Xray installation directory
+      file:
+        path: "{{ xray_install_path }}"
+        state: directory
+
+    - name: Download JFrog Xray
+      get_url:
+        url: "https://releases.jfrog.io/artifactory/jfrog-xray-{{ xray_version }}.tar.gz"
+        dest: "{{ xray_install_path }}/jfrog-xray-{{ xray_version }}.tar.gz"
+        mode: 0755
+
+    - name: Extract Xray archive
+      ansible.builtin.unarchive:
+        src: "{{ xray_install_path }}/jfrog-xray-{{ xray_version }}.tar.gz"
+        dest: "{{ xray_install_path }}"
+        remote_src: yes
+
+    - name: Configure Xray PostgreSQL settings
+      template:
+        src: "xray-postgres.conf.j2"
+        dest: "{{ xray_install_path }}/xray/conf/xray.conf"
+      vars:
+        xray_postgres_host: "{{ postgres_host }}"
+        xray_postgres_port: "{{ postgres_port }}"
+        xray_postgres_db: "{{ postgres_db }}"
+        xray_postgres_user: "{{ postgres_user }}"
+        xray_postgres_password: "{{ postgres_password }}"
+
+    - name: Start Xray service
+      command: "{{ xray_install_path }}/xray/xray.sh start"
+
+    - name: Enable Xray service on boot
+      systemd:
+        name: xray
+        enabled: yes
+
+
+
+#######################
+
+# xray-postgres.conf.j2
+{{ xray_postgres_host }}:{{ xray_postgres_port }}
+{{ xray_postgres_db }}
+{{ xray_postgres_user }}
+{{ xray_postgres_password }}
